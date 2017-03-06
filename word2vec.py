@@ -289,7 +289,11 @@ def tfidf_sentence_vec():
     #print idf
     #calcualte idf score for every word
     # if words of new document cannot be found in old docuemnt, take the smallest value of tfidf score
-    min_idf = min(idf)
+    min_idf = 10000000.0
+    for i in old_file_list[1]:
+        for w in i:
+            if min_idf > idf[w]:
+                min_idf = idf[w]
 
     # word2weight_idf = defaultdict(
     #     lambda: min_idf,
