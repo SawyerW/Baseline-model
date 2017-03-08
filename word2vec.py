@@ -18,6 +18,8 @@ from scipy.cluster.hierarchy import ward, dendrogram,linkage
 import logging
 from gensim.models import word2vec
 from scipy.spatial.distance import pdist, squareform
+from sklearn.manifold import TSNE
+import csv
 
 tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
 def pdftotext():
@@ -273,8 +275,9 @@ def inverse_document_frequencies(documents):
     return idf_values
 
 
-def tfidf_sentence_vec():
-    model, old_file_list, new_file_list = word_to_vector()
+def tfidf_sentence_vec(model, old_file_list, new_file_list):
+    print old_file_list[1]
+
     print "Calculating vectors for documents/sentences using averaging tfidf score"
     old_doc_vec = [[], []]
     old_doc_vec[0] = old_file_list[0]
@@ -286,9 +289,8 @@ def tfidf_sentence_vec():
     # old_doc_vec[1] = vectorizer.fit_transform(old_file_list[1])
     # new_doc_vec[1] = vectorizer.transform(new_file_list[1])
     idf = inverse_document_frequencies(old_file_list[1])
-    #print idf
-    #calcualte idf score for every word
     # if words of new document cannot be found in old docuemnt, take the smallest value of tfidf score
+
     min_idf = 10000000.0
     for i in old_file_list[1]:
         for w in i:
@@ -316,6 +318,7 @@ def tfidf_sentence_vec():
                 tf = term_frequency(old_file_list[1][i][j], old_file_list[1][i])
             elif y == 2:
                 tf = sublinear_term_frequency(old_file_list[1][i][j], old_file_list[1][i])
+
             elif y == 3:
                 tf = augmented_term_frequency(old_file_list[1][i][j], old_file_list[1][i])
             tfidf = tf * idf[old_file_list[1][i][j]]
@@ -339,7 +342,7 @@ def tfidf_sentence_vec():
                 tf = augmented_term_frequency(new_file_list[1][i][j], new_file_list[1][i])
 
             if new_file_list[1][i][j] in idf.keys():
-                tfidf = tf * idf[old_file_list[1][i][j]]
+                tfidf = tf * idf[new_file_list[1][i][j]]
 
             elif new_file_list[1][i][j] not in idf.keys():
                 tfidf = tf * min_idf
@@ -350,11 +353,55 @@ def tfidf_sentence_vec():
             #temp = np.add(temp, model[str(new_style)])
 
         new_doc_vec[1].append(np.divide(temp, nwords))
-    print new_doc_vec
+
     return new_doc_vec, old_doc_vec
 
-def document_distance():
 
+def dimension_reduction():
+    model, old_file_list, new_file_list = word_to_vector()
+    new_doc_vec_tsne = [[],[]]
+    old_doc_vec_tsne = [[],[]]
+    ave_or_tfidf = input(
+        "Choose the way to represent documents through embedded vectors: 1:average embedded vectors, 2: average tfidf embedded vectors: ")
+    if ave_or_tfidf == 1:
+        new_doc_vec, old_doc_vec = average_sentence_vec()
+    elif ave_or_tfidf == 2:
+        new_doc_vec, old_doc_vec = tfidf_sentence_vec(model, old_file_list, new_file_list)
+    new_doc_vec_tsne[0] = new_doc_vec[0]
+    old_doc_vec_tsne[0] = old_doc_vec[0]
+    tsne = TSNE(n_components=2, init='pca', random_state=None, method='barnes_hut', n_iter=1000)
+    new_doc_vec_tsne[1] = tsne.fit_transform(new_doc_vec[1])
+    old_doc_vec_tsne[1] = tsne.fit_transform(old_doc_vec[1])
+    #print new_doc_vec_tsne
+
+    return new_doc_vec_tsne, old_doc_vec_tsne, ave_or_tfidf
+
+
+def write_vec_to_csv():
+    new_doc_vec_tsne, old_doc_vec_tsne, ave_or_tfidf = dimension_reduction()
+    output = np.column_stack((new_doc_vec_tsne[0],new_doc_vec_tsne[1]))
+    output = np.array(output)
+
+    if ave_or_tfidf == 1:
+        with open('word2vec_average.csv', 'w') as f:
+            fieldnames = ['Name', 'X', 'Y']
+            writer = csv.DictWriter(f,fieldnames=fieldnames)
+            writer.writeheader()
+            writer = csv.writer(f)
+
+            writer.writerows(output)
+    elif ave_or_tfidf == 2:
+        with open('word2vec_tfidf.csv', 'w') as f:
+            fieldnames = ['Name', 'X', 'Y']
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer = csv.writer(f)
+
+            writer.writerows(output)
+
+
+def document_distance():
+    model, old_file_list, new_file_list = word_to_vector()
     similarity_information = [[],[[],[]]]
 
 
@@ -362,7 +409,7 @@ def document_distance():
     if ave_or_tfidf == 1:
         new_doc_vec, old_doc_vec = average_sentence_vec()
     elif ave_or_tfidf == 2:
-        new_doc_vec, old_doc_vec = tfidf_sentence_vec()
+        new_doc_vec, old_doc_vec = tfidf_sentence_vec(model, old_file_list, new_file_list)
     similarity_information[0] = new_doc_vec[0]
 
 
@@ -419,11 +466,12 @@ def similar_documents():
             print similarity_information[1][1][i][j]
 
 def visualization():
+    model, old_file_list, new_file_list = word_to_vector()
     ave_or_tfidf = input("Choose the way to represent documents through embedded vectors: 1:average embedded vectors, 2: average tfidf embedded vectors: ")
     if ave_or_tfidf == 1:
         new_doc_vec, old_doc_vec = average_sentence_vec()
     elif ave_or_tfidf == 2:
-        new_doc_vec, old_doc_vec = tfidf_sentence_vec()
+        new_doc_vec, old_doc_vec = tfidf_sentence_vec(model, old_file_list, new_file_list)
 
 
     data_list = pdist(old_doc_vec[1])
@@ -440,6 +488,8 @@ def main():
     #average_sentence_vec()
     #tfidf_sentence_vec()
     #similar_documents()
-    visualization()
+    #visualization()
+    #dimension_reduction()
+    write_vec_to_csv()
 if __name__ == "__main__":
     main()
