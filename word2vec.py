@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import math
 import magic
 import imghdr
@@ -20,7 +21,8 @@ from gensim.models import word2vec
 from scipy.spatial.distance import pdist, squareform
 from sklearn.manifold import TSNE
 import csv
-
+reload(sys)
+sys.setdefaultencoding('utf8')
 tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
 def pdftotext():
 #transform pdf into text file
@@ -112,9 +114,8 @@ def get_text_content():
                              #print list(itertools.chain.from_iterable(sentences))
                     else:
                              continue
-    #print sentences[1]
-    #print len(sentences)
-    #print old_file_list
+    print sentences
+
     return sentences, old_file_list, new_file_list
 
 def data_to_wordlist(data, remove_stopwords=True ):
@@ -126,6 +127,7 @@ def data_to_wordlist(data, remove_stopwords=True ):
     #
     # 2. Remove non-letters
     review_text = re.sub("[^a-zA-Z]"," ", review_text)
+    #print review_text
     #
     # 3. Convert words to lower case and split them
     words = review_text.lower().split()
@@ -210,7 +212,7 @@ def word_to_vector():
     model_name = "300features_40minwords_10context"
     model.save(model_name)
     # print model.most_similar("dog")
-    #print model['time']
+    print model['dog']
     #print old_file_list[0][1]
     # for i in xrange(len(old_file_list[1][1])):
     #     print old_file_list[1][1][i]
@@ -237,7 +239,7 @@ def average_sentence_vec():
             #temp = map(sum, izip(model[str(new_style)],temp))
             #print np.asarray(temp).shape
             #temp = temp + model[str(new_style)]
-            #print temp
+        print temp
         new_doc_vec[1].append(np.divide(temp,nwords))
     for i in xrange(len(old_file_list[0])):
         #temp = [0] * 300
@@ -249,7 +251,7 @@ def average_sentence_vec():
             temp = np.add(temp, model[str(new_style)])
             #temp = map(sum, izip(model[str(new_style)],temp))
         old_doc_vec[1].append(np.divide(temp,nwords))
-    #print old_doc_vec
+
     return new_doc_vec, old_doc_vec
 
 
@@ -373,7 +375,7 @@ def dimension_reduction():
     new_doc_vec_tsne[1] = tsne.fit_transform(new_doc_vec[1])
     old_doc_vec_tsne[1] = tsne.fit_transform(old_doc_vec[1])
     #print new_doc_vec_tsne
-
+    print new_doc_vec_tsne[1]
     return new_doc_vec_tsne, old_doc_vec_tsne, ave_or_tfidf
 
 
